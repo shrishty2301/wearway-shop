@@ -9,6 +9,9 @@ import CartPage from "./pages/CartPage";
 import { CartProvider } from "./state/CartContext";
 import Navbar from "./components/navbar";   // <- use correct casing
 import Footer from "./components/Footer";
+import Signup from "./pages/Signup";
+import Login from "./pages/Login";
+
 
 function App() {
   return (
@@ -22,6 +25,9 @@ function App() {
           <Route path="/contact" element={<Contact />} />
           <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/cart" element={<CartPage />} />
+          <Route path="/signup" element={<Signup />} />
+<Route path="/login" element={<Login />} />
+
         </Routes>
         <Footer />
       </BrowserRouter>

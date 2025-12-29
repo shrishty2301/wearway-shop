@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { databases, storage, ID } from "../appwrite";
 import { useCart } from "../state/CartContext";
+import { useAuth } from "../state/AuthContext";
 
 const dbId = import.meta.env.VITE_APPWRITE_DATABASE_ID;
 const productsCol = import.meta.env.VITE_APPWRITE_PRODUCTS_COLLECTION_ID;
@@ -23,7 +24,9 @@ export default function ProductDetail() {
   });
   const [referenceFile, setReferenceFile] = useState(null);
   const [saving, setSaving] = useState(false);
+
   const { addToCart } = useCart();
+  const { user } = useAuth();
 
   useEffect(() => {
     databases
@@ -32,7 +35,7 @@ export default function ProductDetail() {
         setProduct(doc);
         setForm((f) => ({
           ...f,
-          // no default size any more
+          // no default size
           color: doc.available_colors?.[0] || "",
           design: doc.available_designs?.[0] || "",
         }));
@@ -45,68 +48,76 @@ export default function ProductDetail() {
   };
 
   const handleAddToCart = async () => {
-  if (!product) return;
+    if (!product) return;
 
-  // Decide what to save as size
-  const sizeToSave = form.size || form.custom_size;
-
-  if (!sizeToSave) {
-    alert("Please select a size or enter it in Custom Size.");
-    return;
-  }
-
-  setSaving(true);
-  try {
-    let referenceImageId = null;
-    if (referenceFile) {
-      const uploaded = await storage.createFile(
-        bucketId,
-        ID.unique(),
-        referenceFile
-      );
-      referenceImageId = uploaded.$id;
+    // Require login before adding to cart
+    if (!user) {
+      alert("Please log in or create an account before placing an order.");
+      return;
     }
 
-    const customization = await databases.createDocument(
-      dbId,
-      customCol,
-      ID.unique(),
-      {
-        product_id: product.$id,
-        size: sizeToSave, // always non-empty here
-        color: form.color,
-        design: form.design,
-        custom_size: form.custom_size || null,
-        custom_color: form.custom_color || null,
-        custom_notes: form.custom_notes || null,
-        reference_image_id: referenceImageId,
-        extra_price: 0,
-        preview_image_id: null,
+    // decide what to save as size (standard or custom)
+    const sizeToSave = form.size || form.custom_size;
+    if (!sizeToSave) {
+      alert("Please select a size or enter it in Custom Size.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      let referenceImageId = null;
+      if (referenceFile) {
+        const uploaded = await storage.createFile(
+          bucketId,
+          ID.unique(),
+          referenceFile
+        );
+        referenceImageId = uploaded.$id;
       }
-    );
 
-    const finalPrice = product.price + (customization.extra_price || 0);
+      const customization = await databases.createDocument(
+        dbId,
+        customCol,
+        ID.unique(),
+        {
+          product_id: product.$id,
+          size: sizeToSave,
+          color: form.color,
+          design: form.design,
+          custom_size: form.custom_size || null,
+          custom_color: form.custom_color || null,
+          custom_notes: form.custom_notes || null,
+          reference_image_id: referenceImageId,
+          extra_price: 0,
+          preview_image_id: null,
+        }
+      );
 
-    addToCart({
-      product_id: product.$id,
-      customization_id: customization.$id,
-      name: product.name,
-      price: finalPrice,
-      quantity: qty,
-      options: { ...form, reference_image_id: referenceImageId, size: sizeToSave },
-      preview_url: product.image_url,
-    });
+      const finalPrice = product.price + (customization.extra_price || 0);
 
-    alert("Added to cart");
-    setReferenceFile(null);
-  } catch (err) {
-    console.error(err);
-    alert("Error adding to cart");
-  } finally {
-    setSaving(false);
-  }
-};
+      addToCart({
+        product_id: product.$id,
+        customization_id: customization.$id,
+        name: product.name,
+        price: finalPrice,
+        quantity: qty,
+        options: {
+          ...form,
+          size: sizeToSave,
+          reference_image_id: referenceImageId,
+        },
+        preview_url: product.image_url,
+      });
 
+      alert("Added to cart");
+      setReferenceFile(null);
+    } catch (err) {
+      console.error(err);
+      alert("Error adding to cart");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (!product) {
     return (
@@ -132,7 +143,7 @@ export default function ProductDetail() {
         <div className="grid gap-8 md:grid-cols-2 items-start">
           {/* Left: image + description */}
           <div className="border border-slate-800 rounded-2xl bg-slate-900/80 p-4">
-            <div className="relative w-full h-64 rounded-xl overflow-hidden bg-slate-900">
+            <div className="relative w-full  rounded-xl overflow-hidden bg-slate-900">
               <img
                 src={product.image_url}
                 alt={product.name}
@@ -161,7 +172,7 @@ export default function ProductDetail() {
                 Customize
               </p>
               <p className="mt-1 text-lg font-semibold text-slate-50">
-                UGX {product.price}
+               INR  {product.price}
               </p>
             </div>
 

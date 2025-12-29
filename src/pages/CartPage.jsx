@@ -1,12 +1,58 @@
+// src/pages/CartPage.jsx
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useCart } from "../state/CartContext";
+import { useAuth } from "../state/AuthContext";
 import { databases, ID } from "../appwrite";
 
 const dbId = import.meta.env.VITE_APPWRITE_DATABASE_ID;
 const ordersCol = import.meta.env.VITE_APPWRITE_ORDERS_COLLECTION_ID;
-// src/pages/CartPage.jsx (wrap existing logic with this layout)
+
 export default function CartPage() {
-  const { items, clearCart } = useCart(); // your existing hook
+  const { items, clearCart } = useCart();
   const total = items.reduce((sum, it) => sum + it.price * it.quantity, 0);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  // Redirect guests to login
+  useEffect(() => {
+    if (!user) {
+      navigate("/login?next=/cart");
+    }
+  }, [user, navigate]);
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-50 flex items-center justify-center">
+        <p className="text-sm text-slate-300">
+          Redirecting to login…
+        </p>
+      </div>
+    );
+  }
+
+  const handleCheckout = async () => {
+    if (items.length === 0) return;
+
+    try {
+      // create an order document in Appwrite
+      await databases.createDocument(dbId, ordersCol, ID.unique(), {
+        user_id: user.$id,
+        // Appwrite requires this exact attribute name:
+        total_price: total,      // <-- key changed
+        items: JSON.stringify(items),             
+        status: "pending",
+       
+      });
+
+      clearCart();
+      alert("Order placed! You will be contacted soon.");
+      navigate("/");
+    } catch (err) {
+      console.error(err);
+      alert("Error placing order. Please try again.");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50">
@@ -56,7 +102,9 @@ export default function CartPage() {
                         </p>
                         <p className="text-[11px] text-slate-400 mt-0.5">
                           Size: {item.options.size || "—"} • Color:{" "}
-                          {item.options.color || item.options.custom_color || "—"}
+                          {item.options.color ||
+                            item.options.custom_color ||
+                            "—"}
                         </p>
                         {item.options.custom_notes && (
                           <p className="mt-1 text-[11px] text-slate-300/80 line-clamp-2">
@@ -66,7 +114,7 @@ export default function CartPage() {
                       </div>
                       <div className="text-right text-sm">
                         <p className="font-semibold text-sky-300">
-                          UGX {item.price}
+                          INR {item.price}
                         </p>
                         <p className="text-[11px] text-slate-400">
                           Qty {item.quantity}
@@ -81,13 +129,14 @@ export default function CartPage() {
             <div className="mt-4 flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-900/90 px-4 py-3 text-sm">
               <p className="text-slate-300">Total</p>
               <p className="text-lg font-semibold text-sky-300">
-                UGX {total}
+                INR {total}
               </p>
             </div>
 
             <div className="flex justify-end">
               <button
                 type="button"
+                onClick={handleCheckout}
                 className="mt-3 inline-flex items-center justify-center rounded-full bg-sky-400 px-7 py-2.5 text-sm font-semibold text-slate-950 shadow-lg shadow-sky-400/40 hover:bg-sky-300 transition"
               >
                 Checkout

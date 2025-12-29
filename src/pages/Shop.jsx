@@ -93,7 +93,7 @@ export default function Shop() {
                       </h2>
                     </div>
                     <p className="rounded-full bg-slate-950/85 px-3 py-1 text-xs font-semibold text-sky-300">
-                      UGX {p.price}
+                      INR {p.price}
                     </p>
                   </div>
                 </div>
