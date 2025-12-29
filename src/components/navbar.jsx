@@ -19,7 +19,7 @@ export default function Navbar() {
         <Link to="/" className="flex items-center gap-2">
           {/* Logo image */}
           <img
-            src="/media/logo.png"               // put your logo file here (e.g. /wearway-logo.png or /img/wearway-logo.png)
+            src="/public/media/logo.png"               // put your logo file here (e.g. /wearway-logo.png or /img/wearway-logo.png)
             alt="WearWay logo"
             className="h-16 w-16 rounded-xl object-cover transform transition-transform duration-200 hover:scale-110"
           />
